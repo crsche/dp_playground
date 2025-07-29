@@ -2,14 +2,20 @@ import { useEffect, useRef, useState } from 'react';
 import katex from 'katex';
 import "katex/dist/katex.min.css"
 import "katex/dist/contrib/mhchem.mjs";
+import { DAGGER_MATRIX, LOWER_MATRIX, matExp, matrixToLatex } from './utils';
 
 interface LatexRendererProps {
     latex: string;
     className?: string;
 }
 
-const MatrixTooltip: React.FC<{ latex: string; className?: string }> = ({ latex, className = '' }) => {
+const MatrixTooltip: React.FC<{ dagger: boolean; exp: number; className?: string }> = ({ dagger, exp, className = '' }) => {
     const tooltipRef = useRef<HTMLSpanElement>(null);
+
+    const matrix_raised = dagger ? DAGGER_MATRIX : LOWER_MATRIX;
+    const res = matExp(matrix_raised, exp);
+    const latex = matrixToLatex(res);
+
 
     useEffect(() => {
         if (tooltipRef.current) {
@@ -21,10 +27,15 @@ const MatrixTooltip: React.FC<{ latex: string; className?: string }> = ({ latex,
                     trust: true,
                 });
             } catch (error) {
+                // console.warn('Matrix tooltip LaTeX rendering failed:', latex, error);
+                // if (tooltipRef.current) {
+                //     tooltipRef.current.textContent = latex;
+                // }
+
+                // Red incorrect latex rendering warning text
                 console.warn('Matrix tooltip LaTeX rendering failed:', latex, error);
-                if (tooltipRef.current) {
-                    tooltipRef.current.textContent = latex;
-                }
+                tooltipRef.current!.textContent = "LaTeX rendering failed";
+                tooltipRef.current!.style.color = 'red'; // Set text color to red
             }
         }
     }, [latex]);
@@ -34,7 +45,7 @@ const MatrixTooltip: React.FC<{ latex: string; className?: string }> = ({ latex,
 
 const LatexRenderer: React.FC<LatexRendererProps> = ({ latex, className = '' }) => {
     const containerRef = useRef<HTMLSpanElement>(null);
-    const [hoveredElement, setHoveredElement] = useState<{ element: HTMLElement; isDagger: boolean; x: number; y: number } | null>(null);
+    const [hoveredElement, setHoveredElement] = useState<{ element: HTMLElement; isDagger: boolean; x: number; y: number, exp: number } | null>(null);
 
     useEffect(() => {
         if (containerRef.current) {
@@ -55,13 +66,20 @@ const LatexRenderer: React.FC<LatexRendererProps> = ({ latex, className = '' }) 
                         const target = e.target as HTMLElement;
                         const rect = target.getBoundingClientRect();
 
-                        const textContent = target.textContent || '';
-                        const innerHTML = target.innerHTML || '';
+                        // const textContent = target.textContent || '';
+                        // const innerHTML = target.innerHTML || '';
 
-                        const isDagger = textContent.includes('†') || innerHTML.includes('†');
+                        // const isDagger = textContent.includes('†') || innerHTML.includes('†');
+                        // FIXME: Can we have the dataset and class terms at the same level?
+                        const dataset = (target.firstElementChild as HTMLElement)?.dataset;
+                        const exp: number = dataset.exponent ? parseInt(dataset.exponent, 10) : 1;
+                        const isDagger = dataset.dagger === 'true';
+                        // console.log('Hovered element:', target, 'isDagger:', isDagger);
+                        // || textContent.includes('†') || innerHTML.includes('†');
 
                         setHoveredElement({
                             element: target,
+                            exp,
                             isDagger: !!isDagger,
                             x: rect.left + rect.width / 2,
                             y: rect.top
@@ -83,14 +101,15 @@ const LatexRenderer: React.FC<LatexRendererProps> = ({ latex, className = '' }) 
             }
             catch (error) {
                 console.warn('LaTeX rendering failed for:', latex, error);
-                if (containerRef.current) {
-                    containerRef.current.textContent = latex;
-                }
+                containerRef.current!.textContent = "LaTeX rendering failed";
+                containerRef.current.style.color = 'red'; // Set text color to red
+                containerRef.current.style.fontStyle = 'italic'; // Optional: Adjust font size for better visibility
+                // containerRef.current.style.fontSize = '0.75em'; // Optional: Adjust font size for better visibility
             }
         }
     }, [latex]);
-    const daggerMatrix = String.raw`\left[\begin{matrix} 0 & 0 & 0 \\ 1 & 0 & 0 \\ 0 & 1 & 0 \end{matrix}\right]`; // Creation operator
-    const nonDaggerMatrix = String.raw`\left[\begin{matrix} 0 & 1 & 0 \\ 0 & 0 & 2 \\ 0 & 0 & 0 \end{matrix}\right]`; // Annihilation operator
+    // const daggerMatrix = String.raw`\begin{bmatrix} 0 & 0 & 0 \\ 1 & 0 & 0 \\ 0 & 1 & 0 \end{bmatrix}`; // Creation operator
+    // const nonDaggerMatrix = String.raw`\begin{bmatrix} 0 & 1 & 0 \\ 0 & 0 & 2 \\ 0 & 0 & 0 \end{bmatrix}`; // Annihilation operator
 
     return (
         <>
@@ -108,7 +127,8 @@ const LatexRenderer: React.FC<LatexRendererProps> = ({ latex, className = '' }) 
                     }}
                 >
                     <MatrixTooltip
-                        latex={hoveredElement.isDagger ? daggerMatrix : nonDaggerMatrix}
+                        dagger={hoveredElement.isDagger}
+                        exp={hoveredElement.exp} // Assuming exponent is always 1 for the tooltip
                         className="matrix-tooltip-content"
                     />
                 </div>

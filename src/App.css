@@ -472,7 +472,7 @@ body {
 .latex-equation,
 .latex-rate,
 .latex-label {
-  color: #000000 !important;
+  color: #000000;
 }
 
 .katex {
@@ -491,7 +491,7 @@ body {
 .katex .mclose,
 .katex .mpunct,
 .katex .minner {
-  color: #000000 !important;
+  color: #000000;
 }
 
 .add-step-btn {

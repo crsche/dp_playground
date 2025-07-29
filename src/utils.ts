@@ -17,6 +17,99 @@
 
 //     return result.trim();
 // };
+export const factorial = (n: number): number => {
+    if (n < 0) {
+        throw new Error('Factorial is not defined for negative numbers');
+    }
+    if (n <= 1) {
+        return 1;
+    }
+
+    let result = 1;
+    for (let i = 2; i <= n; i++) {
+        result *= i;
+    }
+    return result;
+};
+
+export const matExp = (matrix: number[][], exp: number): number[][] => {
+    if (exp === 0) {
+        const size = matrix.length;
+        return Array.from({ length: size }, (_, i) =>
+            Array.from({ length: size }, (_, j) => i === j ? 1 : 0)
+        );
+    }
+    if (exp === 1) {
+        return matrix;
+    }
+
+    let result = matrix;
+    let base = matrix;
+    let power = exp - 1;
+
+    while (power > 0) {
+        if (power % 2 === 1) {
+            result = matMul(result, base);
+        }
+        base = matMul(base, base);
+        power = Math.floor(power / 2);
+    }
+
+    return result;
+}
+
+const matMul = (a: number[][], b: number[][]): number[][] => {
+    if (!a || !b || a[0].length !== b.length) {
+        throw new Error('Incompatible matrix dimensions');
+    }
+
+    const rows = a.length;
+    const cols = b[0].length;
+    const inner = a[0].length;
+
+    const result: number[][] = Array.from({ length: rows }, () => Array(cols).fill(0));
+
+    // Cache matrix dimensions and use more efficient loop order
+    for (let i = 0; i < rows; i++) {
+        const aRow = a[i];
+        const resultRow = result[i];
+        for (let k = 0; k < inner; k++) {
+            const aik = aRow[k];
+            if (aik !== 0) { // Skip zero multiplications
+                const bRow = b[k];
+                for (let j = 0; j < cols; j++) {
+                    resultRow[j] += aik * bRow[j];
+                }
+            }
+        }
+    }
+
+    return result;
+}
+
+export const matrixToLatex = (matrix: number[][]): string => {
+    if (!matrix || matrix.length === 0) return '';
+
+    const rows = matrix.map(row =>
+        row.map(cell => cell.toString()).join(' & ')
+    ).join(' \\\\ ');
+
+    return `\\begin{bmatrix} ${rows} \\end{bmatrix}`;
+};
+
+export const DAGGER_MATRIX = [
+    [0, 0, 0, 0],
+    [1, 0, 0, 0],
+    [0, 1, 0, 0],
+    [0, 0, 1, 0]
+];
+export const LOWER_MATRIX = [
+    [0, 1, 0, 0],
+    [0, 0, 2, 0],
+    [0, 0, 0, 3],
+    [0, 0, 0, 0]
+];
+
 
 export type ReactionType = 'forward' | 'equilibrium' | 'reverse';
 
@@ -97,7 +190,7 @@ export const formatReactionEquation = (step: RawElementaryStep): string => {
     }
 
     let res = `\\ce{${normalizedReactants} ${arrow} ${normalizedProducts}}`;
-    console.log('Formatted reaction equation:', res);
+    // console.log('Formatted reaction equation:', res);
     return res;
 };
 
@@ -126,7 +219,9 @@ const stepToKaTeX = (step: ParsedStep, context: 'preview' | 'visualization' = 'p
 
     const format = (name: string, exp: number, dagger: boolean): string => {
         if (exp === 0) return "";
-        return `\\htmlClass{clickable}{x^{${dagger ? "\\dagger" : ""} ${(exp > 1) ? String(exp) : ""}}_{\\tiny \\ce{${name}}}}`;
+        // FIXME: Can we have the dataset and class terms at the same level?
+
+        return `\\htmlClass{clickable}{\\htmlData{dagger=${dagger}, exponent=${exp}}{x^{${dagger ? "\\dagger" : ""} ${(exp > 1) ? String(exp) : ""}}_{\\tiny \\ce{${name}}}}}`;
         // if (exp === 1) {
         //     return dagger ? `x^{\\dagger}_{\\tiny ${name}} ` : `x^{}_{\\tiny ${name}} `;
         // } else {
@@ -188,26 +283,33 @@ const stepToKaTeX = (step: ParsedStep, context: 'preview' | 'visualization' = 'p
     // const G = gain || "1";
     // const L = loss || "1";
 
+    let combinatorial_term = 1;
+    step.reactants.forEach(species => {
+        if (species.coeff > 1) {
+            combinatorial_term *= factorial(species.coeff);
+        }
+    });
+
     let wPrefix = '';
     if (context === 'preview') {
         if (subscript) {
-            wPrefix = `\\mathbb{W}_{${subscript}} = `;
+            wPrefix = `\\mathbb{W}_{${subscript}} =\\;`;
         } else {
-            wPrefix = `\\mathbb{W} = `;
+            wPrefix = `\\mathbb{W} =\\;`;
         }
     } else if (context === 'visualization') {
         if (stepIndex !== undefined) {
             if (subscript) {
-                wPrefix = `\\mathbb{W}_{${stepIndex + 1},${subscript}} = `;
+                wPrefix = `\\mathbb{W}_{${stepIndex + 1},${subscript}} =\\;`;
             } else {
-                wPrefix = `\\mathbb{W}_{${stepIndex + 1}} = `;
+                wPrefix = `\\mathbb{W}_{${stepIndex + 1}} =\\; `;
             }
         } else {
-            wPrefix = `\\mathbb{W} = `;
+            wPrefix = `\\mathbb{W} =\\; `;
         }
     }
 
-    return `{${wPrefix}}${step.rate} \\bigl[ ${gain} - ${loss} \\bigr]`;
+    return `{${wPrefix}} ${combinatorial_term > 1 ? `\\tfrac{${step.rate}}{${combinatorial_term}}` : ""} \\bigl[ ${gain} - ${loss} \\bigr]`;
 }
 
 

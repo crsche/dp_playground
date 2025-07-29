@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import './App.css'
-import { formatReactionEquation, formatSecondQuantizedForm, type RawElementaryStep, type ReactionType } from './chemicalUtils'
+import { formatReactionEquation, formatSecondQuantizedForm, type RawElementaryStep, type ReactionType } from './utils'
 
 import 'katex/dist/katex.min.css'
 import "katex/dist/contrib/mhchem.mjs";
@@ -86,8 +86,8 @@ function App() {
       reactants: 'A + B',
       products: 'C + D',
       type: 'forward' as ReactionType,
-      forwardRate: 'k_f',
-      reverseRate: 'k_r',
+      forwardRate: 'c_f',
+      reverseRate: 'c_r',
     })
   );
 
@@ -174,7 +174,7 @@ function App() {
                         <input
                           type="text"
                           className="rate-input"
-                          placeholder="k_f"
+                          placeholder="c_f"
                           value={currentStep.forwardRate}
                           onChange={(e) => setCurrentStep({ ...currentStep, forwardRate: e.target.value })}
                         />
