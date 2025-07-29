@@ -17,6 +17,8 @@
 
 //     return result.trim();
 // };
+
+
 export const factorial = (n: number): number => {
     if (n < 0) {
         throw new Error('Factorial is not defined for negative numbers');
@@ -128,7 +130,9 @@ export const parseRawElementaryStep = (step: RawElementaryStep): ParsedStep => {
         if (!input.trim()) {
             return [];
         }
-        return input.split('+').map(species => {
+        // console.log(step);
+        return input.split(' + ').map(species => {
+            // console.log('Parsing species:', species);
             const trimmed = species.trim();
 
             const match = trimmed.match(/^(\d+)(.+)$/);
@@ -174,8 +178,8 @@ export const formatReactionEquation = (step: RawElementaryStep): string => {
     const normalizedProducts = step.products;
 
     let arrow: string;
-    let forwardRate = step.forwardRate ? step.forwardRate.trim() : 'k_f';
-    let backwardRate = step.reverseRate ? step.reverseRate.trim() : 'k_r';
+    let forwardRate = step.forwardRate ? step.forwardRate.trim() : 'c_f';
+    let backwardRate = step.reverseRate ? step.reverseRate.trim() : 'c_r';
 
     switch (step.type) {
         case 'forward':
@@ -196,7 +200,7 @@ export const formatReactionEquation = (step: RawElementaryStep): string => {
 
 export const formatRateConstant = (type: 'forward' | 'reverse', value: string): string => {
     const subscript = type === 'forward' ? 'f' : 'r';
-    return `k_{${subscript}} = ${value}`;
+    return `c_{${subscript}} = ${value}`;
 };
 
 const stepToKaTeX = (step: ParsedStep, context: 'preview' | 'visualization' = 'preview', subscript?: 'f' | 'r', stepIndex?: number): string => {
@@ -309,7 +313,7 @@ const stepToKaTeX = (step: ParsedStep, context: 'preview' | 'visualization' = 'p
         }
     }
 
-    return `{${wPrefix}} ${combinatorial_term > 1 ? `\\tfrac{${step.rate}}{${combinatorial_term}}` : ""} \\bigl[ ${gain} - ${loss} \\bigr]`;
+    return `{${wPrefix}} ${combinatorial_term > 1 ? `\\tfrac{${step.rate}}{${combinatorial_term}}` : `${step.rate}`} \\bigl[ ${gain} - ${loss} \\bigr]`;
 }
 
 
